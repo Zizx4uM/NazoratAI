@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
-    { name = "NazoratAI Engineering Team" }
+    { name = "Xajibayev Azizbek", email = "khadjibayev65@gmail.com" }
 ]
 keywords = [
     "credit-risk",

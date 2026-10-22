@@ -44,6 +44,18 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 
+# Generated runtime outputs (regenerated on-demand via CLI)
+models/*.joblib
+reports/*.pdf
+reports/*.md
+data/corporate_portfolio.csv
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
 # OS metadata
 .DS_Store
 Thumbs.db

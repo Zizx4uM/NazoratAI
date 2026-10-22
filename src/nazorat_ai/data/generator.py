@@ -164,71 +164,88 @@ def generate_synthetic_portfolio(
         loan_balance_uzs = float(loan_amount_uzs * balance_ratio)
         interest_rate_pct = float(rng.uniform(18.0, 24.5))
 
-        # Financial & risk metrics conditioned on ground truth risk tier
+        # Macro shock + financial & operational metrics conditioned on ground truth tier
+        macro_shock = float(rng.normal(0, 0.04))
+
         if tier == RiskTier.GREEN.value:
-            # Healthy operational metrics
-            overdue_days = int(rng.choice([0, 0, 0, 0, rng.integers(1, 15)]))
-            k2_amount = 0.0
-            tax_arrears = 0.0 if rng.random() > 0.15 else float(rng.uniform(1e6, 20e6))
-            collateral_coverage = float(rng.uniform(1.20, 1.85))
+            # Healthy operational metrics with realistic variance
+            revenue_change_pct = float(rng.normal(0.03, 0.11)) + macro_shock
+            production_change_pct = float(revenue_change_pct * 0.70 + rng.normal(0, 0.08))
+            electricity_change_pct = float(production_change_pct * 0.60 + rng.normal(0, 0.07))
 
-            revenue_change_pct = float(rng.normal(0.06, 0.05))   # +6% avg growth
-            production_change_pct = float(rng.normal(0.05, 0.05))
-            electricity_change_pct = float(rng.normal(0.04, 0.04))
-
-            ebitda_margin_pct = float(rng.uniform(14.0, 28.0))
-            net_profit_margin_pct = float(rng.uniform(8.0, 18.0))
-            current_ratio = float(rng.uniform(1.30, 2.40))
-            debt_to_equity = float(rng.uniform(0.60, 1.80))
-            dscr = float(rng.uniform(1.35, 2.60))
-            katm_score = int(rng.integers(380, 495))
+            dscr = float(np.clip(rng.normal(1.58, 0.42), 0.75, 3.50))
+            current_ratio = float(np.clip(rng.normal(1.48, 0.38), 0.75, 3.00))
+            debt_to_equity = float(np.clip(rng.normal(1.75, 0.65), 0.50, 4.50))
+            ebitda_margin_pct = float(np.clip(rng.normal(14.5, 5.5), -2.0, 32.0))
+            net_profit_margin_pct = float(np.clip(rng.normal(7.8, 3.8), -3.0, 18.0))
+            katm_score = int(np.clip(rng.normal(395, 42), 260, 495))
+            overdue_days = int(rng.choice([0, 0, 0, rng.integers(1, 28)]))
+            k2_amount = 0.0 if rng.random() > 0.08 else float(rng.uniform(1e6, 25e6))
+            tax_arrears = 0.0 if rng.random() > 0.25 else float(rng.uniform(1e6, 30e6))
+            collateral_coverage = float(np.clip(rng.normal(1.36, 0.26), 0.85, 2.50))
+            emp_growth = float(rng.normal(0.02, 0.08))
             credit_rating = rng.choice(["AAA", "AA", "A", "BBB"])
             monitoring_cycle = "Har 6 oyda"
 
         elif tier == RiskTier.YELLOW.value:
-            # Watch-list / potential trouble (overdue ~45-80 days, revenue slump)
+            # Watch-list / emerging vulnerability
+            revenue_change_pct = float(rng.normal(-0.07, 0.13)) + macro_shock
+            production_change_pct = float(revenue_change_pct * 0.70 + rng.normal(0, 0.09))
+            electricity_change_pct = float(production_change_pct * 0.60 + rng.normal(0, 0.08))
+
+            dscr = float(np.clip(rng.normal(1.18, 0.34), 0.55, 2.20))
+            current_ratio = float(np.clip(rng.normal(1.18, 0.30), 0.55, 2.20))
+            debt_to_equity = float(np.clip(rng.normal(2.55, 0.85), 1.00, 5.50))
+            ebitda_margin_pct = float(np.clip(rng.normal(8.5, 4.8), -5.0, 20.0))
+            net_profit_margin_pct = float(rng.normal(3.5, 3.2))
+            katm_score = int(np.clip(rng.normal(335, 48), 190, 440))
             overdue_days = int(rng.choice([
-                rng.integers(46, 85),  # Key regulatory trigger: > 45 days
-                rng.integers(25, 44),
-                rng.integers(46, 75),
+                rng.integers(8, 35),
+                rng.integers(36, 75),
+                rng.integers(20, 60),
             ]))
-            k2_amount = float(rng.choice([0.0, rng.uniform(50e6, 800e6)]))
-            tax_arrears = float(rng.uniform(20e6, 350e6))
-            collateral_coverage = float(rng.uniform(0.95, 1.25))
-
-            # Revenue slump around -15% to -28%
-            revenue_change_pct = float(rng.uniform(-0.30, -0.12))
-            production_change_pct = float(rng.uniform(-0.35, -0.15))
-            electricity_change_pct = float(rng.uniform(-0.32, -0.10))
-
-            ebitda_margin_pct = float(rng.uniform(4.0, 12.0))
-            net_profit_margin_pct = float(rng.uniform(1.0, 6.0))
-            current_ratio = float(rng.uniform(0.90, 1.25))
-            debt_to_equity = float(rng.uniform(1.80, 3.50))
-            dscr = float(rng.uniform(0.95, 1.20))
-            katm_score = int(rng.integers(260, 375))
-            credit_rating = rng.choice(["BB", "B"])
+            k2_amount = 0.0 if rng.random() > 0.38 else float(rng.uniform(15e6, 450e6))
+            tax_arrears = float(rng.uniform(10e6, 300e6))
+            collateral_coverage = float(np.clip(rng.normal(1.15, 0.22), 0.70, 1.80))
+            emp_growth = float(rng.normal(-0.04, 0.09))
+            credit_rating = rng.choice(["BBB", "BB", "B"])
             monitoring_cycle = "Favqulodda (har oy)" if overdue_days > 45 else "Har chorakda"
 
         else:  # RED
-            # Severely distressed / NPL (>90 days overdue, deep drop, K-2 arrears)
-            overdue_days = int(rng.integers(91, 240))
-            k2_amount = float(rng.uniform(500e6, 4.5e9))
-            tax_arrears = float(rng.uniform(200e6, 2.0e9))
-            collateral_coverage = float(rng.uniform(0.55, 0.95))
+            # Distressed / NPL with insolvency signs
+            revenue_change_pct = float(rng.normal(-0.21, 0.17)) + macro_shock
+            production_change_pct = float(revenue_change_pct * 0.70 + rng.normal(0, 0.11))
+            electricity_change_pct = float(production_change_pct * 0.60 + rng.normal(0, 0.09))
 
-            revenue_change_pct = float(rng.uniform(-0.65, -0.25))
-            production_change_pct = float(rng.uniform(-0.70, -0.30))
-            electricity_change_pct = float(rng.uniform(-0.60, -0.30))
-
-            ebitda_margin_pct = float(rng.uniform(-10.0, 3.0))
-            net_profit_margin_pct = float(rng.uniform(-18.0, 0.5))
-            current_ratio = float(rng.uniform(0.40, 0.85))
-            debt_to_equity = float(rng.uniform(3.50, 7.50))
-            dscr = float(rng.uniform(0.30, 0.85))
-            katm_score = int(rng.integers(120, 255))
+            dscr = float(np.clip(rng.normal(0.85, 0.36), 0.20, 1.70))
+            current_ratio = float(np.clip(rng.normal(0.90, 0.32), 0.20, 1.70))
+            debt_to_equity = float(np.clip(rng.normal(3.85, 1.25), 1.50, 8.00))
+            ebitda_margin_pct = float(np.clip(rng.normal(2.5, 6.0), -18.0, 16.0))
+            net_profit_margin_pct = float(np.clip(rng.normal(-1.5, 4.8), -18.0, 9.0))
+            katm_score = int(np.clip(rng.normal(255, 58), 100, 390))
+            overdue_days = int(rng.choice([
+                rng.integers(40, 85),
+                rng.integers(86, 170),
+                rng.integers(60, 130),
+            ]))
+            k2_amount = float(rng.uniform(100e6, 2.5e9)) if rng.random() > 0.22 else 0.0
+            tax_arrears = float(rng.uniform(50e6, 1.2e9))
+            collateral_coverage = float(np.clip(rng.normal(0.92, 0.24), 0.40, 1.60))
+            emp_growth = float(rng.normal(-0.12, 0.11))
             credit_rating = rng.choice(["CCC", "CC", "D"])
             monitoring_cycle = "Favqulodda (har oy) / Sud jarayoni"
+
+        # Realistic regulatory discretion divergence on ~7% borderline accounts
+        assigned_tier = tier
+        if rng.random() < 0.07:
+            if tier == RiskTier.YELLOW.value:
+                assigned_tier = rng.choice([RiskTier.GREEN.value, RiskTier.RED.value])
+            elif tier == RiskTier.GREEN.value and (dscr < 1.15 or overdue_days > 15):
+                assigned_tier = RiskTier.YELLOW.value
+            elif tier == RiskTier.RED.value and (dscr > 1.10 and overdue_days < 70):
+                assigned_tier = RiskTier.YELLOW.value
+
+        tier = assigned_tier
 
         # Base operational figures
         collateral_value_uzs = float(loan_balance_uzs * collateral_coverage)
@@ -244,12 +261,7 @@ def generate_synthetic_portfolio(
         current_electricity_kwh = float(max(base_kwh * (1.0 + electricity_change_pct), 500.0))
 
         prev_employees = int(rng.integers(25, 450))
-        if tier == RiskTier.RED.value:
-            curr_employees = max(int(prev_employees * rng.uniform(0.5, 0.8)), 5)
-        elif tier == RiskTier.YELLOW.value:
-            curr_employees = max(int(prev_employees * rng.uniform(0.85, 0.98)), 10)
-        else:
-            curr_employees = int(prev_employees * rng.uniform(1.0, 1.15))
+        curr_employees = max(int(prev_employees * (1.0 + emp_growth)), 5)
 
         # Recent monitoring date (within last 180 days)
         days_ago = int(rng.integers(5, 175))

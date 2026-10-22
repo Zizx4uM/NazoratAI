@@ -47,7 +47,10 @@ def cmd_generate_data(args):
 
 
 def cmd_train_model(args):
-    """Train ML Credit Risk Model on dataset."""
+    """Train ML Credit Risk Model with 80/20 stratified split and 5-fold cross validation."""
+    from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+    from nazorat_ai.ml.model import LABEL_TO_INT
+
     data_path = Path(args.data) if args.data else DEFAULT_DATA_DIR / "corporate_portfolio.csv"
     if not data_path.exists():
         print(f"Data file not found at {data_path}. Generating default dataset first...")
@@ -66,15 +69,34 @@ def cmd_train_model(args):
     X = model.feature_pipeline.extract_features(df)
     y = df["ground_truth_risk_tier"].tolist()
 
+    # 1. Stratified 80/20 train/test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.20, random_state=42, stratify=y
+    )
+
+    # 2. Fit on training split & evaluate on held-out test set
+    model.fit(X_train, y_train)
+    metrics = evaluate_model_performance(model, X_test, y_test)
+
+    # 3. 5-Fold Stratified Cross-Validation on full feature space
+    y_encoded = [LABEL_TO_INT[val] for val in y]
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    cv_f1 = cross_val_score(model.classifier, X, y_encoded, cv=cv, scoring="f1_macro")
+    cv_roc = cross_val_score(model.classifier, X, y_encoded, cv=cv, scoring="roc_auc_ovr")
+
+    # 4. Fit on full data for production deployment artifact
     model.fit(X, y)
     model.save(model_path)
     print(f"✅ Model trained and saved to: {model_path}")
-
-    metrics = evaluate_model_performance(model, X, y)
-    print(f"   - Overall Accuracy: {metrics['accuracy'] * 100:.2f}%")
+    print("\n📈 Held-Out Test Evaluation (20% sample, N={}):".format(len(y_test)))
+    print(f"   - Test Accuracy: {metrics['accuracy'] * 100:.2f}%")
+    print(f"   - Test Macro F1: {metrics['macro_f1']:.4f}")
+    print(f"   - Test ROC-AUC (OVR): {metrics['roc_auc_ovr']:.4f}")
     print(f"   - EWS Watchlist Precision: {metrics['ews_watch_precision'] * 100:.2f}% (Target: >=70%)")
     print(f"   - EWS Watchlist Recall: {metrics['ews_watch_recall'] * 100:.2f}% (Target: >=65%)")
-    print(f"   - ROC-AUC (OVR): {metrics['roc_auc_ovr']:.4f}")
+    print("\n🔬 5-Fold Stratified Cross-Validation:")
+    print(f"   - Macro F1: {cv_f1.mean():.4f} (±{cv_f1.std():.4f})")
+    print(f"   - ROC-AUC:  {cv_roc.mean():.4f} (±{cv_roc.std():.4f})")
 
 
 def cmd_scan_portfolio(args):
