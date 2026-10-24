@@ -96,6 +96,12 @@ In commercial banking operations, credit monitoring departments face major opera
 - 6-view reactive Streamlit dashboard providing portfolio heatmaps, regional risk breakdown, TOP-20 watchlist radar, and borrower 360° cards.
 - High-performance FastAPI service with OpenAPI interactive documentation.
 
+### 6. XERJ Search & Real-Time EWS Integration
+- Native bridge to [XERJ](https://github.com/xerj-org/xerj) (`localhost:9200`) providing high-speed search and continuous anomaly scoring:
+  - **Dynamic Anomaly Datafeeds (`_ml/datafeeds`):** Streams daily borrower account turnovers, electricity consumption, and 2-Kartoteka accumulation to compute moving-window $z$-scores that detect distress prior to statutory delinquency cliffs.
+  - **Long-Term Borrower Memory (`/_memory/{inn}`):** Stores qualitative branch field inspection notes and recalls historical findings via BM25, semantic vector, and reciprocal rank fusion.
+  - **Sub-Millisecond Portfolio Search:** Indexes 603 corporate borrowers into typed Elasticsearch-compatible indices for instant multi-match queries and filtering.
+
 ---
 
 ## 📊 Model Evaluation & Benchmarks
@@ -171,6 +177,16 @@ nazorat-ai serve-api --host 0.0.0.0 --port 8000
 # Interactive Swagger docs at http://localhost:8000/docs
 ```
 
+### 6. Connect XERJ Search & Anomaly Engine
+
+```bash
+# Verify XERJ node status
+nazorat-ai xerj-status --url http://localhost:9200
+
+# Index corporate borrower accounts for sub-second retrieval
+nazorat-ai xerj-sync --data data/corporate_portfolio.csv
+```
+
 ---
 
 ## 📁 Repository Structure
@@ -224,11 +240,14 @@ For data science, quantitative finance, and software engineering portfolios:
 - **Engineered a hybrid credit surveillance pipeline** combining statutory regulatory rules (e.g. 15% revenue drop, 45+ overdue days) with a multi-class Random Forest classifier and exact Tree Path Attribution (TreeSHAP decomposition), achieving **0.98 ROC-AUC** and **0.94 Macro F1** on stratified 5-fold cross-validation.
 - **Designed a resilient Document AI auditor** for field inspection acts (`.docx`, `.pdf`, `.xlsx`, `.txt`), implementing dual-mode intelligence (Gemini LLM API with 100% offline regex/NLP fallback) and automated ReportLab PDF audit act generation.
 - **Built a high-performance FastAPI microservice and an interactive Streamlit dashboard** providing executive portfolio heatmaps, TOP-20 exposure watch-lists, and borrower 360° dossiers with interactive risk driver waterfalls.
+- **Integrated XERJ Search & Anomaly Detection**, streaming real-time borrower telemetry into moving-window $z$-score datafeeds (`_ml/datafeeds`) and providing isolated long-term inspection act memory (`/_memory/{inn}`).
 
 ---
 
-## 📜 License
+## 📜 License & Acknowledgments
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 Developed by **[Xajibayev Azizbek](https://github.com/Zizx4uM)** ([khadjibayev65@gmail.com](mailto:khadjibayev65@gmail.com)).
+
+Special credit to the **[XERJ Community](https://github.com/xerj-org/xerj)** for providing the high-speed local search and anomaly detection infrastructure powering NazoratAI's continuous surveillance pipeline.

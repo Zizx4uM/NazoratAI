@@ -223,6 +223,36 @@ def cmd_run_dashboard(args):
     subprocess.run(["streamlit", "run", str(dash_path), "--server.port", str(args.port)])
 
 
+def cmd_xerj_status(args):
+    """Check connectivity and status of XERJ search and anomaly engine."""
+    from nazorat_ai.integrations.xerj import XerjEWSClient
+    client = XerjEWSClient(base_url=args.url)
+    print(f"Connecting to XERJ engine at {args.url}...")
+    if client.ping():
+        print(f"✅ XERJ engine is online and answering at {args.url}")
+    else:
+        print(f"⚠️  XERJ engine is not answering at {args.url}. Start it with: xerj --insecure &")
+
+
+def cmd_xerj_sync(args):
+    """Sync portfolio dataset into XERJ search index."""
+    from nazorat_ai.integrations.xerj import XerjEWSClient
+    data_path = Path(args.data) if args.data else DEFAULT_DATA_DIR / "corporate_portfolio.csv"
+    if not data_path.exists():
+        print(f"Error: Dataset not found at {data_path}")
+        sys.exit(1)
+
+    df = pd.read_csv(data_path)
+    client = XerjEWSClient(base_url=args.url)
+    print(f"Indexing {len(df)} corporate borrower records into XERJ index '{args.index}'...")
+    try:
+        count = client.sync_portfolio_borrowers(df, index_name=args.index)
+        print(f"✅ Successfully synced {count} borrowers into XERJ index '{args.index}'.")
+    except Exception as e:
+        print(f"❌ Failed to sync to XERJ: {e}")
+        sys.exit(1)
+
+
 def app():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
@@ -274,6 +304,18 @@ def app():
     p_dash = subparsers.add_parser("run-dashboard", help="Start Streamlit web dashboard")
     p_dash.add_argument("--port", type=int, default=8501, help="Dashboard port")
     p_dash.set_defaults(func=cmd_run_dashboard)
+
+    # xerj-status
+    p_xstat = subparsers.add_parser("xerj-status", help="Check XERJ engine connectivity")
+    p_xstat.add_argument("--url", type=str, default="http://localhost:9200", help="XERJ base URL")
+    p_xstat.set_defaults(func=cmd_xerj_status)
+
+    # xerj-sync
+    p_xsync = subparsers.add_parser("xerj-sync", help="Index corporate portfolio into XERJ engine")
+    p_xsync.add_argument("--data", type=str, default=None, help="Path to portfolio CSV")
+    p_xsync.add_argument("--url", type=str, default="http://localhost:9200", help="XERJ base URL")
+    p_xsync.add_argument("--index", type=str, default="corporate_borrowers", help="XERJ index name")
+    p_xsync.set_defaults(func=cmd_xerj_sync)
 
     args = parser.parse_args()
     if not args.subcommand:
